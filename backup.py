@@ -9,6 +9,25 @@ from email.message import EmailMessage
 import traceback
 
 
+"""
+Sample config JSON file
+{
+    "filenameTemplate": "server_{}.tar.gz",
+    "smtp": {
+        "server": "smtp.sendgrid.net",
+        "port": 587,
+        "to": "you@gmail.com",
+        "from": "sender@example.com",
+        "username": "apikey",
+        "password": "yourapikey"
+    },
+    "files": [
+        "hi.txt"
+    ]
+}
+"""
+
+
 CONFIG_FILE = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.expandvars("$HOME"), "backupConfig.json")
 
 datestring = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d_%Hh%Mm")
