@@ -13,6 +13,8 @@ import traceback
 Sample config JSON file
 {
     "filenameTemplate": "server_{}.tar.gz",
+    "remoteOutputLocation": "gd:/server",
+    "deleteOlderThanDays": 14,
     "smtp": {
         "server": "smtp.sendgrid.net",
         "port": 587,
@@ -68,15 +70,31 @@ def run(*args: str):
         sys.exit(1)
 
 
-filename = config.get("filenameTemplate", "backup_{}.tar.gz").format(datestring)
-
-run("tar", "-czvf", filename, *config.get("files", []))
-run("rclone", "copy", "-v", filename, "gd:/server")
-try:
-    os.remove(filename)
-except Exception as e:
-    msg = f"Failed to delete file `{filename}`: {str(e)}.\nThe program has been aborted.\nBelow is the stacktrace.\n\n"
+def fail_exception(e):
+    msg = f"Exception caught: {str(e)}.\nThe program has been aborted.\nBelow is the stacktrace.\n\n"
     msg += traceback.format_exc()
     send_email(f"Failed to run backups on {datestring}", msg)
     sys.exit(1)
-run("rclone", "delete", "-v", "--min-age", "15d", "gd:/server")
+
+
+try:
+    filename = config.get("filenameTemplate", "backup_{}.tar.gz").format(datestring)
+    remote_output_location = config["remoteOutputLocation"]
+    delete_threshold = config["deleteOlderThanDays"] + 1
+
+    run("tar", "-czvf", filename, *config.get("files", []))
+    run("rclone", "copy", "-v", filename, remote_output_location)
+    try:
+        os.remove(filename)
+    except Exception as e:
+        fail_exception(e)
+    run(
+        "rclone",
+        "delete",
+        "-v",
+        "--min-age",
+        f"{delete_threshold}d",
+        remote_output_location,
+    )
+except Exception as e:
+    fail_exception(e)
