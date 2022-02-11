@@ -28,7 +28,11 @@ Sample config JSON file
 """
 
 
-CONFIG_FILE = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.expandvars("$HOME"), "backupConfig.json")
+CONFIG_FILE = (
+    sys.argv[1]
+    if len(sys.argv) > 1
+    else os.path.join(os.path.expandvars("$HOME"), "backupConfig.json")
+)
 
 datestring = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d_%Hh%Mm")
 
@@ -42,9 +46,9 @@ def send_email(subject: str, content: str):
 
     msg = EmailMessage()
     msg.set_content(content)
-    msg['Subject'] = subject
-    msg['From'] = config["smtp"]["from"]
-    msg['To'] = config["smtp"]["to"]
+    msg["Subject"] = subject
+    msg["From"] = config["smtp"]["from"]
+    msg["To"] = config["smtp"]["to"]
 
     context = ssl.create_default_context()
     with smtplib.SMTP(config["smtp"]["server"], config["smtp"]["port"]) as server:
@@ -66,8 +70,8 @@ def run(*args: str):
 
 filename = config.get("filenameTemplate", "backup_{}.tar.gz").format(datestring)
 
-run('tar', '-czvf', filename, *config.get("files", []))
-run('rclone', 'copy', "-v", filename, 'gd:/server')
+run("tar", "-czvf", filename, *config.get("files", []))
+run("rclone", "copy", "-v", filename, "gd:/server")
 try:
     os.remove(filename)
 except Exception as e:
@@ -75,4 +79,4 @@ except Exception as e:
     msg += traceback.format_exc()
     send_email(f"Failed to run backups on {datestring}", msg)
     sys.exit(1)
-run('rclone', 'delete', "-v", '--min-age', '15d', 'gd:/server')
+run("rclone", "delete", "-v", "--min-age", "15d", "gd:/server")
