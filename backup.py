@@ -115,8 +115,8 @@ def main():
         if type(exception) == RunException:
             message += str(exception)
         else:
-            message += f"Unrecognised exception caught: {str(e)}.\nBelow is the stacktrace.\n\n"
-            message += traceback.format_exc()
+            message += f"Unrecognised exception caught: {str(exception)}.\nBelow is the stacktrace.\n\n"
+            message += "".join(traceback.format_tb(exception.__traceback__))
     else:
         message += "No errors reported."
 
