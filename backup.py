@@ -61,33 +61,27 @@ def send_email(subject: str, content: str):
         server.send_message(msg)
 
 
+class RunException(Exception):
+    pass
+
+
 def run(*args: str):
     p = subprocess.run(args, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     if p.returncode != 0:
-        msg = f"Failed to run command `{' '.join(args)}`: exited with return code {p.returncode}.\nThe program has been aborted.\nBelow is the output of the failing command.\n\n"
+        msg = f"Failed to run command `{' '.join(args)}`: exited with return code {p.returncode}.\nBelow is the output of the failing command.\n\n"
         msg += p.stdout.decode()
-        send_email(f"Failed to run backups on {datestring}", msg)
-        sys.exit(1)
+        raise RunException(msg)
 
 
-def fail_exception(e):
-    msg = f"Exception caught: {str(e)}.\nThe program has been aborted.\nBelow is the stacktrace.\n\n"
-    msg += traceback.format_exc()
-    send_email(f"Failed to run backups on {datestring}", msg)
-    sys.exit(1)
-
-
-try:
+def do_backup():
     filename = config.get("filenameTemplate", "backup_{}.tar.gz").format(datestring)
     remote_output_location = config["remoteOutputLocation"]
     delete_threshold = config["deleteOlderThanDays"] + 1
 
     run("tar", "-czvf", filename, *config.get("files", []))
     run("rclone", "copy", "-v", filename, remote_output_location)
-    try:
-        os.remove(filename)
-    except Exception as e:
-        fail_exception(e)
+    os.remove(filename)
+
     run(
         "rclone",
         "delete",
@@ -96,5 +90,29 @@ try:
         f"{delete_threshold}d",
         remote_output_location,
     )
-except Exception as e:
-    fail_exception(e)
+
+
+def main():
+    exception = None
+    try:
+        do_backup()
+    except Exception as e:
+        exception = e
+
+    ok = True
+    message = f"Date: {datestring}\nremoteOutputLocation: {config.get('remoteOutputLocation')}\ndeleteOlderThanDays: {config.get('deleteOlderThanDays')}\nFiles: {', '.join(config.get('files', ['None']))}\n\n"
+    if exception is not None:
+        ok = False
+        if type(exception) == RunException:
+            message += str(exception)
+        else:
+            message += f"Unrecognised exception caught: {str(e)}.\nBelow is the stacktrace.\n\n"
+            message += traceback.format_exc()
+    else:
+        message += "No errors reported."
+
+    send_email(f"Backup: {'OK' if ok else 'ERRORED'} on {datestring}", message)
+
+
+if __name__ == "__main__":
+    main()
