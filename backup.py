@@ -1,13 +1,13 @@
-import subprocess
-import os
 import datetime
 import json
-import sys
+import os
+import platform
 import smtplib
 import ssl
-from email.message import EmailMessage
+import subprocess
+import sys
 import traceback
-
+from email.message import EmailMessage
 
 """
 Sample config JSON file
@@ -100,7 +100,16 @@ def main():
         exception = e
 
     ok = True
-    message = f"Date: {datestring}\nremoteOutputLocation: {config.get('remoteOutputLocation')}\ndeleteOlderThanDays: {config.get('deleteOlderThanDays')}\nFiles: {', '.join(config.get('files', ['None']))}\n\n"
+    message = (
+        f"Date: {datestring}\n"
+        f"Host: {platform.node()}\n"
+        f"remoteOutputLocation: {config.get('remoteOutputLocation')}\n"
+        f"deleteOlderThanDays: {config.get('deleteOlderThanDays')}\n"
+        f"Files: \n"
+    )
+    message += "\n".join(map(lambda x: f"    * {x}", config.get("files", ["None"])))
+    message += "\n\n"
+
     if exception is not None:
         ok = False
         if type(exception) == RunException:
