@@ -105,7 +105,7 @@ def publish_message(filepath: str, subject: str, content: str):
     if len(messages) >= 10:
         messages = messages[-9:]
 
-    messages.append({"time": time.now(), "subject": subject, "content": content})
+    messages.append({"time": int(time.time()), "subject": subject, "content": content})
 
     with open(filepath, "w") as f:
         json.dump(messages, f)
