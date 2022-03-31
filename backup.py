@@ -8,9 +8,11 @@ import subprocess
 import sys
 import traceback
 from email.message import EmailMessage
+import time
 
 """
 Sample config JSON file
+
 {
     "filenameTemplate": "server_{}.tar.gz",
     "remoteOutputLocation": "gd:/server",
@@ -25,7 +27,8 @@ Sample config JSON file
     },
     "files": [
         "hi.txt"
-    ]
+    ],
+    "messageFile": "messages.json"
 }
 """
 
@@ -36,7 +39,7 @@ CONFIG_FILE = (
     else os.path.join(os.path.expandvars("$HOME"), "backupConfig.json")
 )
 
-datestring = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d_%Hh%Mm")
+datestring = datetime.datetime.utcnow().strftime("%Y-%m-%d_%Hh%Mm")
 
 with open(CONFIG_FILE) as f:
     config = json.load(f)
@@ -92,10 +95,27 @@ def do_backup():
     )
 
 
+def publish_message(filepath: str, subject: str, content: str):
+    try:
+        with open(filepath) as f:
+            messages = json.load(f)
+    except FileNotFoundError:
+        messages = []
+
+    if len(messages) >= 10:
+        messages = messages[-9:]
+
+    messages.append({"time": datetime.datetime.utcnow().isoformat(), "subject": subject, "content": content})
+
+    with open(filepath, "w") as f:
+        json.dump(messages, f)
+
+
 def main():
     exception = None
     try:
         do_backup()
+        pass
     except Exception as e:
         exception = e
 
@@ -121,6 +141,9 @@ def main():
         message += "No errors reported."
 
     send_email(f"Backup: {'OK' if ok else 'ERRORED'} on {datestring}", message)
+
+    if (filename := config.get("messageFile", None)) is not None:
+        publish_message(filename, f"Backup {'OK' if ok else 'ERRORED'}", message)
 
 
 if __name__ == "__main__":
