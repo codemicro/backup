@@ -27,8 +27,7 @@ Sample config JSON file
     },
     "files": [
         "hi.txt"
-    ],
-    "messageFile": "messages.json"
+    ]
 }
 """
 
@@ -95,22 +94,6 @@ def do_backup():
     )
 
 
-def publish_message(filepath: str, subject: str, content: str):
-    try:
-        with open(filepath) as f:
-            messages = json.load(f)
-    except FileNotFoundError:
-        messages = []
-
-    if len(messages) >= 10:
-        messages = messages[-9:]
-
-    messages.append({"time": int(time.time()), "subject": subject, "content": content})
-
-    with open(filepath, "w") as f:
-        json.dump(messages, f)
-
-
 def main():
     exception = None
     try:
@@ -141,9 +124,6 @@ def main():
         message += "No errors reported."
 
     send_email(f"Backup: {'OK' if ok else 'ERRORED'} on {datestring}", message)
-
-    if (filename := config.get("messageFile", None)) is not None:
-        publish_message(filename, f"Backup {'OK' if ok else 'ERRORED'}", message)
 
 
 if __name__ == "__main__":
